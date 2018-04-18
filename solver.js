@@ -1,54 +1,59 @@
-const ReadableStream = require('stream').Readable;
+const { Duplex } = require('stream');
+
 
 const ACCEPTED_CELL = 1;
 
-class Solver {
-    constructor(matrix) {
-        this.matrix = matrix;
+class Solver extends Duplex {
+
+    constructor(options) {
+        super({ objectMode: true });
+        this.columnGroups = null;
+        this.y = 0;
     }
 
-    *solve() {
-        if (this.matrix.length === 0) {
-            return [];
+    _processLine(line) {
+        if (!this.columnGroups) {
+            this.columnGroups = line.map(() => []);
         }
-
-        const visited = this._createVisitedMatrix();
-
-        for (let y = 0; y < this.matrix.length; y++) {
-            for (let x = 0; x < this.matrix[y].length; x++) {
-                if (this.matrix[y][x] === ACCEPTED_CELL && !visited[y][x]) {
-                    visited[y][x] = true;
-                    const group = this._explore(x, y, visited, [[y, x]]);
-                    if (group.length > 1) {
-                        yield group;
-                    }
+        else if (this.columnGroups.length !== line.length) {
+            throw new Error('Not all lines have the same length');
+        }
+        const updatedGroups = new Set();
+        for (let x = 0; x < line.length; x++) {
+            if (line[x] === ACCEPTED_CELL) {
+                if (line[x - 1] === ACCEPTED_CELL && this.columnGroups[x] !== this.columnGroups[x - 1]) {
+                    this.columnGroups[x - 1].unshift(...this.columnGroups[x]);
+                    this.columnGroups[x] = this.columnGroups[x - 1];
                 }
+                this.columnGroups[x].push([this.y, x]);
+                updatedGroups.add(this.columnGroups[x]);
+            }
+        }
+        this._checkForCompletedGroups(updatedGroups);
+        this.y++;
+    }
+
+    _checkForCompletedGroups(updatedGroupsSet) {
+        for (let x = 0; x < this.columnGroups.length; x++) {
+            const group = this.columnGroups[x];
+            if (group.length && !updatedGroupsSet.has(group)) {
+                this.push(group);
+                this.columnGroups[x].length = 0;
             }
         }
     }
 
-    _explore(x, y, visited, group) {
-        for (const [incX, incY] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) {
-            const [x2, y2] = [x + incX, y + incY];
-            if (visited[y2] && !visited[y2][x2] && this.matrix[y2][x2] === ACCEPTED_CELL) {
-                visited[y2][x2] = true;
-                group.push([y2, x2]);
-                this._explore(x2, y2, visited, group);
-            }
-        }
-        
-        return group;
+    _write(data, encoding, callback) {
+        this._processLine(data);
+        callback();
     }
 
-    _createVisitedMatrix() {
-        return Array(this.matrix.length)
-        .fill(undefined)
-        .map((e, i) =>
-            Array(this.matrix[i].length)
-            .fill(undefined)
-            .map(() => false)
-        );
+    _final(callback) {
+        this._checkForCompletedGroups(new Set());
+        callback();
     }
+
+    _read() {}
 }
 
 module.exports = Solver;
