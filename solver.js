@@ -1,3 +1,5 @@
+const ReadableStream = require('stream').Readable;
+
 const ACCEPTED_CELL = 1;
 
 class Solver {
@@ -5,13 +7,12 @@ class Solver {
         this.matrix = matrix;
     }
 
-    solve() {
+    *solve() {
         if (this.matrix.length === 0) {
             return [];
         }
 
         const visited = this._createVisitedMatrix();
-        const solution = [];
 
         for (let y = 0; y < this.matrix.length; y++) {
             for (let x = 0; x < this.matrix[y].length; x++) {
@@ -19,13 +20,11 @@ class Solver {
                     visited[y][x] = true;
                     const group = this._explore(x, y, visited, [[y, x]]);
                     if (group.length > 1) {
-                        solution.push(group);
+                        yield group;
                     }
                 }
             }
         }
-
-        return solution;
     }
 
     _explore(x, y, visited, group) {
