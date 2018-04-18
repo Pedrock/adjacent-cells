@@ -4,7 +4,7 @@
   "description": "```bash\r node index.js example.json\r ```",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js example.json"
+    "start": "node src/index.js example.json"
   },
   "repository": {
     "type": "git",

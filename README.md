@@ -2,5 +2,5 @@
 
 ## Usage
 ```bash
-node index.js example.json
+node src/index.js example.json
 ```
