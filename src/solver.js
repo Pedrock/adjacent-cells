@@ -14,8 +14,7 @@ class Solver extends Duplex {
     _handleLine(line) {
         if (!this.columnGroups) {
             this.columnGroups = line.map(() => []);
-        }
-        else if (this.columnGroups.length !== line.length) {
+        } else if (this.columnGroups.length !== line.length) {
             throw new Error('Not all lines have the same length');
         }
         this._findLineGroups(line);
@@ -24,7 +23,7 @@ class Solver extends Duplex {
 
     _mergeGroupWithPreviousCell(x) {
         for (const value of this.columnGroups[x]) {
-            this.columnGroups[x - 1].unshift(value);
+            this.columnGroups[x - 1].push(value);
         }
         this.columnGroups[x] = this.columnGroups[x - 1];
     }
