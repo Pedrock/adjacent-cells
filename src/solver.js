@@ -22,7 +22,9 @@ class Solver extends Duplex {
         for (let x = 0; x < line.length; x++) {
             if (line[x] === ACCEPTED_CELL) {
                 if (line[x - 1] === ACCEPTED_CELL && this.columnGroups[x] !== this.columnGroups[x - 1]) {
-                    this.columnGroups[x - 1].unshift(...this.columnGroups[x]);
+                    for (const value of this.columnGroups[x - 1]) {
+                        this.columnGroups[x].unshift(value);
+                    }
                     this.columnGroups[x] = this.columnGroups[x - 1];
                 }
                 this.columnGroups[x].push([this.y, x]);
