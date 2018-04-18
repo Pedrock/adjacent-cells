@@ -11,28 +11,37 @@ class Solver extends Duplex {
         this.y = 0;
     }
 
-    _processLine(line) {
+    _handleLine(line) {
         if (!this.columnGroups) {
             this.columnGroups = line.map(() => []);
         }
         else if (this.columnGroups.length !== line.length) {
             throw new Error('Not all lines have the same length');
         }
+        this._findLineGroups(line);
+        this.y++;
+    }
+
+    _mergeGroupWithPreviousCell(x) {
+        for (const value of this.columnGroups[x]) {
+            this.columnGroups[x - 1].unshift(value);
+        }
+        this.columnGroups[x] = this.columnGroups[x - 1];
+    }
+
+    _findLineGroups(line) {
         const updatedGroups = new Set();
         for (let x = 0; x < line.length; x++) {
             if (line[x] === ACCEPTED_CELL) {
                 if (line[x - 1] === ACCEPTED_CELL && this.columnGroups[x] !== this.columnGroups[x - 1]) {
-                    for (const value of this.columnGroups[x - 1]) {
-                        this.columnGroups[x].unshift(value);
-                    }
-                    this.columnGroups[x] = this.columnGroups[x - 1];
+                    this._mergeGroupWithPreviousCell(x);
                 }
                 this.columnGroups[x].push([this.y, x]);
                 updatedGroups.add(this.columnGroups[x]);
             }
         }
         this._checkForCompletedGroups(updatedGroups);
-        this.y++;
+        return updatedGroups;
     }
 
     _checkForCompletedGroups(updatedGroupsSet) {
@@ -46,7 +55,7 @@ class Solver extends Duplex {
     }
 
     _write(data, encoding, callback) {
-        this._processLine(data);
+        this._handleLine(data);
         callback();
     }
 
