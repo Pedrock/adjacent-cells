@@ -21,34 +21,45 @@ class Solver extends Duplex {
         this.y++;
     }
 
-    _mergeGroupWithPreviousCell(x) {
+    _mergeGroupWithPreviousCell(x, clearedGroups) {
         for (const value of this.columnGroups[x]) {
             this.columnGroups[x - 1].push(value);
         }
-        this.columnGroups[x] = this.columnGroups[x - 1];
+        const replacedGroup = this.columnGroups[x];
+        for (let i = 0; i < this.columnGroups.length; i++) {
+            if (this.columnGroups[i] === replacedGroup) {
+                this.columnGroups[i] = this.columnGroups[x - 1];
+            } 
+        }
+        clearedGroups.delete(replacedGroup);
     }
 
     _findLineGroups(line) {
         const updatedGroups = new Set();
+        const clearedGroups = new Set();
         for (let x = 0; x < line.length; x++) {
             if (line[x] === ACCEPTED_CELL) {
                 if (line[x - 1] === ACCEPTED_CELL && this.columnGroups[x] !== this.columnGroups[x - 1]) {
-                    this._mergeGroupWithPreviousCell(x);
+                    this._mergeGroupWithPreviousCell(x, clearedGroups);
                 }
                 this.columnGroups[x].push([this.y, x]);
                 updatedGroups.add(this.columnGroups[x]);
+            } else if (this.columnGroups[x].length) {
+                clearedGroups.add(this.columnGroups[x]);
+                this.columnGroups[x] = [];
             }
         }
-        this._checkForCompletedGroups(updatedGroups);
+        this._checkForCompletedGroups(updatedGroups, clearedGroups);
         return updatedGroups;
     }
 
-    _checkForCompletedGroups(updatedGroupsSet) {
-        for (let x = 0; x < this.columnGroups.length; x++) {
-            const group = this.columnGroups[x];
-            if (group.length && !updatedGroupsSet.has(group)) {
-                this.push(group);
-                this.columnGroups[x].length = 0;
+    _checkForCompletedGroups(updatedGroupsSet, clearedGroupsSet) {
+        for (const group of clearedGroupsSet) {
+            if (!updatedGroupsSet.has(group)) {
+                if (group.length > 1) {
+                    this.push(group);
+                }
+                group.length = 0;
             }
         }
     }
@@ -59,7 +70,7 @@ class Solver extends Duplex {
     }
 
     _final(callback) {
-        this._checkForCompletedGroups(new Set());
+        this._checkForCompletedGroups(new Set(), new Set(this.columnGroups));
         callback();
     }
 
