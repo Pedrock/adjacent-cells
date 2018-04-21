@@ -57,7 +57,7 @@ class Solver extends Duplex {
         for (const group of clearedGroupsSet) {
             if (!updatedGroupsSet.has(group)) {
                 if (group.length > 1) {
-                    this.push(group);
+                    this.push(group.slice());
                 }
                 group.length = 0;
             }

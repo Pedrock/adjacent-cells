@@ -4,7 +4,8 @@
   "description": "```bash\r node index.js example.json\r ```",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js example.json"
+    "start": "node src/index.js example.json",
+    "test": "mocha src/tests"
   },
   "repository": {
     "type": "git",
@@ -18,5 +19,8 @@
   "homepage": "https://github.com/Pedrock/adjacent-cells#readme",
   "dependencies": {
     "JSONStream": "^1.3.2"
+  },
+  "devDependencies": {
+    "mocha": "^5.1.1"
   }
 }
