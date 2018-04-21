@@ -5,7 +5,7 @@ const ACCEPTED_CELL = 1;
 
 class Group {
 
-    constructor(columnIndex) {
+    constructor() {
         this.columns = new Set();
         this.points = [];
     }
@@ -23,10 +23,6 @@ class Group {
         this.columns.add(...columns);
     }
 
-    addColumn(i) {
-        this.columns.add(i);
-    }
-
     removeColumn(i) {
         this.columns.delete(i);
     }
@@ -38,7 +34,7 @@ class Group {
 
 class Solver extends Duplex {
 
-    constructor(options) {
+    constructor() {
         super({ objectMode: true });
         this.columnGroups = null;
         this.y = 0;

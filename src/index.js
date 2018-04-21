@@ -10,7 +10,7 @@ if (process.argv.length !== 3) {
 function printGroup(group) {
     const groupsString = group
         .map(coords => `[${coords.join(', ')}]`)
-        .join(", ")
+        .join(", ");
         console.log(`[ ${groupsString} ]`);
 }
 
