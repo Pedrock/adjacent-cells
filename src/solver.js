@@ -3,6 +3,39 @@ const { Duplex } = require('stream');
 
 const ACCEPTED_CELL = 1;
 
+class Group {
+
+    constructor(columnIndex) {
+        this.columns = new Set();
+        this.points = [];
+    }
+
+    addCurrentPoint([y, x]) {
+        this.columns.add(x);
+        this.points.push([y, x]);
+    }
+
+    addPoints(points) {
+        this.points.push(...points);
+    }
+
+    addColumns(columns) {
+        this.columns.add(...columns);
+    }
+
+    addColumn(i) {
+        this.columns.add(i);
+    }
+
+    removeColumn(i) {
+        this.columns.delete(i);
+    }
+
+    isCleared() {
+        return this.columns.size === 0;
+    }
+}
+
 class Solver extends Duplex {
 
     constructor(options) {
@@ -13,7 +46,7 @@ class Solver extends Duplex {
 
     _handleLine(line) {
         if (!this.columnGroups) {
-            this.columnGroups = line.map(() => []);
+            this.columnGroups = line.map(() => null);
         } else if (this.columnGroups.length !== line.length) {
             throw new Error('Not all lines have the same length');
         }
@@ -21,45 +54,53 @@ class Solver extends Duplex {
         this.y++;
     }
 
-    _mergeGroupWithPreviousCell(x, clearedGroups) {
-        for (const value of this.columnGroups[x]) {
-            this.columnGroups[x - 1].push(value);
-        }
-        const replacedGroup = this.columnGroups[x];
-        for (let i = 0; i < this.columnGroups.length; i++) {
-            if (this.columnGroups[i] === replacedGroup) {
+    _mergeGroupToPreviousCell(x) {
+        if (this.columnGroups[x]) {
+            this.columnGroups[x - 1].addPoints(this.columnGroups[x].points);
+            this.columnGroups[x - 1].addColumns(this.columnGroups[x].columns);
+            const columnsToReplace = this.columnGroups[x].columns;
+            for (const i of columnsToReplace) {
                 this.columnGroups[i] = this.columnGroups[x - 1];
-            } 
+            }
+        } else {
+            this.columnGroups[x] = this.columnGroups[x - 1];
         }
-        clearedGroups.delete(replacedGroup);
+    }
+
+    _addCurrentPoint(x) {
+        if (!this.columnGroups[x]) {
+            this.columnGroups[x] = new Group();
+        }
+        this.columnGroups[x].addCurrentPoint([this.y, x]);
+    }
+
+    _removeCurrentPoint(x, clearedGroups) {
+        this.columnGroups[x].removeColumn(x);
+        if (this.columnGroups[x].isCleared()) {
+            clearedGroups.add(this.columnGroups[x]);
+        }
+        this.columnGroups[x] = null;
     }
 
     _findLineGroups(line) {
-        const updatedGroups = new Set();
         const clearedGroups = new Set();
         for (let x = 0; x < line.length; x++) {
             if (line[x] === ACCEPTED_CELL) {
                 if (line[x - 1] === ACCEPTED_CELL && this.columnGroups[x] !== this.columnGroups[x - 1]) {
-                    this._mergeGroupWithPreviousCell(x, clearedGroups);
+                    this._mergeGroupToPreviousCell(x);
                 }
-                this.columnGroups[x].push([this.y, x]);
-                updatedGroups.add(this.columnGroups[x]);
-            } else if (this.columnGroups[x].length) {
-                clearedGroups.add(this.columnGroups[x]);
-                this.columnGroups[x] = [];
+                this._addCurrentPoint(x);
+            } else if (this.columnGroups[x]) {
+                this._removeCurrentPoint(x, clearedGroups);
             }
         }
-        this._checkForCompletedGroups(updatedGroups, clearedGroups);
-        return updatedGroups;
+        this._checkForCompletedGroups(clearedGroups);
     }
 
-    _checkForCompletedGroups(updatedGroupsSet, clearedGroupsSet) {
+    _checkForCompletedGroups(clearedGroupsSet) {
         for (const group of clearedGroupsSet) {
-            if (!updatedGroupsSet.has(group)) {
-                if (group.length > 1) {
-                    this.push(group.slice());
-                }
-                group.length = 0;
+            if (group.points.length > 1) {
+                this.push(group.points);
             }
         }
     }
@@ -70,7 +111,8 @@ class Solver extends Duplex {
     }
 
     _final(callback) {
-        this._checkForCompletedGroups(new Set(), new Set(this.columnGroups));
+        const groupsSet = new Set(this.columnGroups.filter(group => !!group));
+        this._checkForCompletedGroups(groupsSet);
         callback();
     }
 
